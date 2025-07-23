@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+    postgres-db:
+        image: postgres:14
+        container_name: postgres-db
+        restart: always
+        volumes:
+            - pg-data:/var/lib/postgresql/data
+        env_file:
+            - ./server/.env
+        environment:
+            POSTGRES_USER: ${PG_USERNAME}
+            POSTGRES_PASSWORD: ${PG_PASSWORD}
+            POSTGRES_DB: ${PG_NAME}
+        networks:
+            - server
+
+    mongo-db:
+        image: mongo
+        container_name: mongo-db
+        restart: always
+        networks:
+            - server
+
+    redis:
+        image: redis:7-alpine
+        container_name: redis
+        restart: always
+        networks:
+            - server
+
+    backend:
+        build:
+            context: ./server
+            dockerfile: Dockerfile
+        image: backend
+        container_name: backend
+        ports:
+            - 8000:8000
+        depends_on:
+            - postgres-db
+            - mongo-db
+            - redis
+
+    frontend:
+        build:
+            context: ./client
+            dockerfile: Dockerfile
+        image: frontend
+        container_name: frontend
+        restart: unless-stopped
+        ports:
+            - 3000:80
+        depends_on:
+            - backend
+        networks:
+            - client
+
+volumes:
+    pg-data:
+        name: postgres-data
+
+networks:
+    client:
+        driver: bridge
+    server:
+        driver: bridge
